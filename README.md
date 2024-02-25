@@ -2,6 +2,17 @@
 
 #### 介绍
 谢波的数据结构与算法，Rust语言描述
+git config --global user.name 'autumner' 
+git config --global user.email '18322313385@163.com'
+保存用户名字和密码
+git config --global credential.helper store
+下次再提醒一次，以后就不用再输入用户名和密码
+git提交步骤
+git add README.md  
+git add stack.rs
+git commit -m "4.2.2Rust实现栈"
+git remote add origin https://gitee.com/autumner/data-structure-and-algorithms-xiebo.git
+git push -u origin master
 
 #### 软件架构
 软件架构说明
@@ -10,12 +21,10 @@
 #### 安装教程
 
 1.  xxxx
-2.  xxxx
-3.  xxxx
 
 #### 使用说明
 
-1.  xxxx
+1. stack.rs -> 4.2.2 Rust 实现栈 
 2.  xxxx
 3.  xxxx
 

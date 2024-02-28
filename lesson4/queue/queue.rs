@@ -101,7 +101,6 @@ impl<T> Queue<T> {
         }
     } 
 
-/*
 fn main(){
     basic();
     iter();
@@ -140,4 +139,3 @@ fn iter(){
     assert_eq!(14, q.into_iter().sum::<i32>() );
     
 }
-*/

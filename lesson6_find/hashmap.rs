@@ -89,13 +89,117 @@ impl<T> HashMap<T>
              }
          }
      }
+    fn remove(&mut self, key: usize) -> Option<T> {
+        if 0 == key { panic!("Error: key must > 0");}
+        let pos = self.hash(key);
+        if 0 == self.slot[pos]{
+            //槽中无数据，返回None
+            None
+        } else if key == self.slot[pos] {
+            //找到相同key，更新slot和data
+            self.slot[pos] = 0;
+            let data = Some(self.data[pos].clone());
+            self.data[pos] = Default::default();
+            data
+        } else {
+            let mut data: Option<T> = None;
+            let mut stop = false;
+            let mut found = false;
+            let mut curr = pos;
+
+            while 0 != self.slot[curr] && !found && !stop {
+                if key == self.slot[curr] {
+                    //找到了值，删除数据
+                    found = true;
+                    self.slot[curr] = 0;
+                    data = Some(self.data[curr].clone());
+                    self.data[curr] = Default::default();
+                } else {
+                    //再哈希回到了最初位置，说明找了一圈还没有
+                    curr = self.rehash(curr);
+                    if curr == pos {
+                        stop = true;
+                    }
+                }
+            }
+            data
+        }
+    }
+
+    fn get_pos(&self, key: usize) -> usize {
+        if 0 == key { panic!("Error: key must > 0");}
+
+        //计算数据位置
+        let pos = self.hash(key);
+        let mut stop = false;
+        let mut found = false;
+        let mut curr = pos;
+
+        //循环查找数据
+        while 0 != self.slot[curr] && !found && !stop {
+            if key == self.slot[curr]{
+                found = true;
+            } else {
+                //再哈希回到了最初位置，说明找了一圈还没有
+                curr = self.rehash(curr);
+                if curr == pos {
+                    stop = true;
+                }
+            }
+        }
+        curr
+    }
+    //获取val的引用及可变引用
+    fn get(&self, key: usize) -> Option<&T> {
+        let curr = self.get_pos(key);
+        self.data.get(curr)
+    }
+    fn get_mut(&mut self, key: usize) -> Option<&mut T>{
+        let curr = self.get_pos(key);
+        self.data.get_mut(curr)
+    }
+    fn contains(&self, key: usize) -> bool{
+        if 0 == key {panic!("Error: key must > 0");}
+        self.slot.contains(&key)
+    }
+    //为hashmap实现的迭代及可变迭代
+    fn iter(&self) -> Iter<T>{
+        let mut iterator = Iter { stack: Vec::new()};
+        for item in self.data.iter(){
+            iterator.stack.push(item);
+        }
+        iterator
+    }
+    fn iter_mut(&mut self) -> IterMut<T> {
+        let mut iterator = IterMut {stack: Vec::new()};
+        for item in self.data.iter_mut(){
+            iterator.stack.push(item);
+        }
+        iterator
+    }
+}
+//实现迭代功能
+struct Iter<'a, T: 'a> { stack: Vec<&'a T>,}
+impl <'a, T> Iterator for Iter<'a, T> {
+    // add code here
+    type Item = &'a T;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.stack.pop()
+    }
+}
+struct IterMut<'a, T: 'a>{ stack: Vec<&'a mut T>,}
+impl <'a, T> Iterator for IterMut<'a, T> {
+    type Item = &'a mut T;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.stack.pop()
+    }
 
 }
-
 
 fn main(){
     let start = Instant::now();
     basic();
+    iter();
 
     println!("Time cost: {}ms", start.elapsed().as_millis());
 }
@@ -105,4 +209,36 @@ fn basic(){
     hmap.insert(3, "tiger");
     hmap.insert(10, "cat");
     println!("{:?}", hmap);
+    println!("empty: {}, size: {}", hmap.is_empty(), hmap.len());
+    println!("contains key 2: {}", hmap.contains(2));
+
+    println!("key 3: {:?}", hmap.get(3));
+    let val_ptr = hmap.get_mut(3).unwrap();
+    *val_ptr = "fish";
+    println!("Update key 3: {:?}", hmap.get(3));
+    println!("Remove key 3: {:?}", hmap.remove(3));
+    println!("Remove key 12: {:?}", hmap.remove(12));
+
+    hmap.clear();
+    println!("Clear hashmap empty: {}, size: {}", hmap.is_empty(), hmap.len());
+}
+fn iter(){
+    let mut hmap1 = HashMap::new(17);
+    hmap1.insert(1, "tiger");
+    //hmap1.insert(0,"dog");不能插入slot为0的data
+    hmap1.insert(3, "cat");
+    hmap1.insert(10, "tee");
+    println!("{:?}",hmap1);
+
+    for item in hmap1.iter(){
+        println!("iter val:{item}");
+    }
+
+    for item in hmap1.iter_mut(){
+        *item = "fish";
+    }
+
+    for item in hmap1.iter(){
+        println!("update iter val:{item}");
+    }
 }

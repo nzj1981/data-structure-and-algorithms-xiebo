@@ -50,7 +50,7 @@ struct Run {
 struct MergeLo<'a> {
     list_len: usize, //待排序集合长度
     first_pos: usize,//run1的起始位置
-    first_pen: usize, //run1的长度
+    first_len: usize, //run1的长度
     second_pos: usize,//run2的起始位置
     dest_pos: usize, //排序结果的下标位置
     list: &'a mut [i32],//待排序集合的部分区间
@@ -302,11 +302,114 @@ impl<'a> SortState<'a> {
             }
             
             //将run 入栈、各run的长度不同
+            self.runs.push(Run {
+                pos: pos,
+                len: run_len,
+            });
+            //找到下一个run位置
+            self.pos += run_len;
+            //run的长度各不相同，需要合并不符合
+            //A > B + C 且 B > C 规则的run 
+            self.merge_collapse();
         }
+        // 不管合并规则，强制从栈顶开始合并剩下的
+        // 所有run到只剩下一个run，则tim_sort排序完成
+        self.merge_force_collapse();
+    }
+    //合并run使得A > B + C 且B > C 
+    //如果A <= B + C, 则 B 和A、C 中较短的合并
+    //如果只有A、B，则A <= B 时 A 和B 合并
+    fn merge_collapse(&mut self) {
+        let runs = &mut self.runs;
+        while runs.len() > 1 {
+            let n = runs.len() - 2;
+
+            //判断A B C D 的关系，加入D是为了防止特殊情况的Bug
+            //A <= B + C || D <= A + B 
+            if (n >= 1 && runs[n - 1].len <= runs[n].len + runs[n + 1].len) || (n >= 2 && runs[n - 2].len <= runs[n].len + runs[n - 1].len){
+                // 三个连续的 run:A、B、C，判断其长度关系并进行合并
+                // n - 1 对应A、n对应B、n + 1 对应C 
+                let (pos1, pos2) = if runs[n - 1].len < runs[n + 1].len {
+                    (n - 1,n) //A B合并
+                } else {
+                    (n, n + 1) //B C 合并
+                };
+                // 取出待合并的run1 和run2
+                let (run1, run2) = (runs[pos1], runs[pos2]);
+                debug_assert_eq!(run1.pos + run1.len, run2.pos );
+                //合并run1 和run2 到run1，其实就是更新run1 的参数并删除run2，
+                //run1 下标不变，但合并后长度是run1 和 run2长度之和
+                runs.remove(pos2);
+                runs[pos1] = Run {
+                    pos: run1.pos,
+                    len: run1.len + run2.len,
+                };
+                //取出合并后的run1 去进行归并排序
+                let new_list = self.list
+                    .split_at_mut(run1.pos).1 
+                    .split_at_mut(run1.len + run2.len).0;
+                merge_sort(new_list, run1.len, run2.len);
+            } else {
+                break;
+            }
+        }
+    }
+    //集合处理完了就强制合并剩余的run到只剩下一个run 
+    fn merge_force_collapse(&mut self) {
+        let runs = &mut self.runs;
+        while runs.len() > 1 {
+            let n = runs.len() - 2;
+            //三个连续的run：A、B、C，判断其长度关系并进行合并
+            //n - 1 对应A、n对应B、n + 1 对应C 
+            let (pos1, pos2) = if n > 0 && runs[n - 1].len < runs[n + 1].len {
+                (n - 1, n)
+            } else {
+                (n, n + 1)
+            };
+            // 取出待合并分区run1 和 run2
+            let (run1, run2) = (runs[pos1], runs[pos2]);
+            debug_assert_eq!(run1.len, run2.pos);
+            // 合并run1 和run2 到run1 即更新run1 的参数并删除 run2
+            // run1下标不变，但合并后长度是run1 和run2长度之和
+            runs.remove(pos2);
+            runs[pos1] = Run {
+                pos: run1.pos,
+                len: run1.len + run2.len,
+            };
+            //取出合并后的run1去进行归并排序
+            let new_list = self.list
+                .split_at_mut(run1.pos).1 
+                .split_at_mut(run1.len + run2.len).0;
+            merge_sort(new_list, run1.len, run2.len);
+        }
+    }
+}
+
+//timSort入口
+fn tim_sort(list: &mut [i32]) {
+    if list.len() < MIN_MERGE {
+        binary_insertion_sort(list);
+    } else {
+        let mut sort_state = SortState::new(list);
+        sort_state.sort();
     }
 }
 
 fn main(){
     let start = Instant::now();
+    let mut nums: Vec<i32> = vec![
+         2,  4,  7,  8, 23, 19, 16, 14, 13, 12, 10, 20,
+        18, 17, 15, 11,  9, -1,  5,  6,  1,  3, 21, 40,
+        22, 39, 38, 37, 36, 35, 34, 33, 24, 30, 31, 32,
+        25, 26, 27, 28, 29, 41, 42, 43, 44, 45, 46, 47,
+        48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
+        60, 80, 79, 78, 77, 76, 75, 74, 73, 72, 71, 70,
+        61, 62, 63, 64, 65, 66, 67, 68, 69, 95, 94, 93,
+        92, 91, 90, 85, 82, 83, 84, 81, 86, 87, 88, 89,
+        321, 923, 754, 231, 635, 893, 110, 367, 451, 555,
+        1132, 5532, 8094, 1521, 3306, 6379, 3389, 9521,5432,8396,
+    ];
+    tim_sort(&mut nums);
+    println!("Tim sorted nums: {:?}", nums);
     println!("Time cost: {:?}ms ", start.elapsed().as_millis());
 }

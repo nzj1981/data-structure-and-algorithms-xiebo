@@ -188,6 +188,110 @@ struct RBTree<K: Ord + Debug, V> {
     root: *mut RBNode<K, V>,
 }
 //为红黑树实现默认值
+impl<K: Ord + Debug, V> Default for RBTree<K, V> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+//实现红黑树
+impl<K: Ord + Debug, V> RBTree<K, V> {
+    fn new() -> Self {
+        Self { root: null_mut()}
+    }
+    fn is_empty(&self) -> bool {
+        self.root.is_null()
+    }
+    //计算树节点数
+    fn size(&self) -> usize {
+        unsafe {
+            (*self.root).size(0)
+        }
+    }
+    //计算叶节点数
+    fn leaf_size(&self) -> usize {
+        unsafe {
+            (*self.root).leaf_size()
+        }
+    }
+    // 计算非叶节点数
+    fn none_leaf_size(&self) -> usize {
+        unsafe {
+            (*self.root).none_leaf_size()
+        }
+    }
+    //树深度
+    fn depth(&self) -> usize {
+        unsafe {
+            (*self.root).depth()
+        }
+    }
+    //最大最小值
+    fn min(&self) -> Option<(&K, &V)> {
+        unsafe {
+            (*self.root).min()
+        }
+    }
+    fn max(&self) -> Option<&K, &V> {
+        unsafe {
+            (*self.root).max()
+        }
+    }
+    
+    //数据查询
+    fn contains(&self, key: &K) -> bool {
+        unsafe {
+            (*self.root).contains(key)
+        }
+    }
+    //获取值引用及可变引用
+    fn get(&self, key: &K) -> Option<&V> {
+        unsafe {
+            let mut node = self.root;
+            while !node.is_null() {
+                node = match (*node).key.cmp(key) {
+                    Less => (*node).right,
+                    Equal => return Some(&(*node).val),
+                    Greater => (*node).left,
+                }
+            }
+        }
+        None
+    }
+    fn get_mut(&self, key: &K) -> Option<&mut V> {
+        unsafe {
+            let mut node = self.root;
+            while !node.is_null() {
+                node = match (*node).key.cmp(key) {
+                    Less => (*node).right,
+                    Equal => return Some(&mut (*node).val),
+                    Greater => (*node).left,
+                }
+            }
+        }
+        None
+    }
+    //数据插入
+    fn insert(&mut self, key: K, val: V) {
+        unsafe {
+            let mut parent = null_mut();
+            let mut node = self.root;
+
+            //找到待插入节点及其父节点位置
+            while !node.is_null() {
+                parent = node;
+                node = match (*node).key.cmp(&key) {
+                    Less => (*node).right,
+                    Equal => {
+                        (*node).val = val;
+                        return;
+                    }
+                    Greater => (*node).left,
+                }
+            }
+        //数据插入
+        }
+    }
+}
 
 fn main(){
     let start = Instant::now();
